@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.python.framework.graph_util import convert_variables_to_constants as convert_to_constant
 import codecs
 import sys
 
@@ -125,7 +126,15 @@ def main(argv=None):
     ckpt = tf.train.get_checkpoint_state('./save_attention/')
     if ckpt and ckpt.model_checkpoint_path:
         saver.restore(sess, ckpt.model_checkpoint_path)
-    # saver.restore(sess, CHECKPOINT_PATH)
+
+    # 存储为pb文件，以后可更快的执行
+    graph_def = tf.get_default_graph().as_graph_def()
+    out_graph_def = \
+        convert_to_constant(sess,
+                            graph_def,
+                            ['decoder/rnn/attention_wrapper/TensorArrayStack/TensorArrayGatherV3'])
+    with tf.gfile.GFile('./model.pb', 'wb') as f:
+        f.write(out_graph_def.SerializeToString())
 
     output_ids = sess.run(output_op)
     print(output_ids)
